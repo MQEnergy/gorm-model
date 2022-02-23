@@ -50,7 +50,7 @@ func GenerateSingleModel(db *gorm.DB, tbName string, table Table) error {
 	fileName := "./models/" + tbName + ".go"
 	var f *os.File
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		fmt.Println(tbName + " 已存在.")
+		fmt.Println(camelTbName + " 已存在.")
 		return err
 	} else {
 		f, err = os.Create(fileName)

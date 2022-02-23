@@ -5,6 +5,10 @@
 ```shell script
 go get -u github.com/MQEnergy/gorm-model
 ```
+#### 注意：
+```
+默认生成model的package 为models，默认生成到main.go所在根目录的models目录中
+```
 
 ### 方法
 
