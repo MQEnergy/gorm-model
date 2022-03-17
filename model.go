@@ -106,7 +106,7 @@ func GetSingleTable(db *gorm.DB, dbName string, tbName string) Table {
 func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string {
 	content := "package models\n\n"
 	camelTbName := generator.CamelCase(tbName)
-	content += "var " + camelTbName + "TbName = \"" + tbName + "\"\n"
+	content += "var " + camelTbName + "TbName = \"" + tbName + "\"\n\n"
 
 	if len(tbComment) > 0 {
 		content += "// " + camelTbName + " " + tbComment + "\n"
