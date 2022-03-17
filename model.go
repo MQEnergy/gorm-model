@@ -105,10 +105,12 @@ func GetSingleTable(db *gorm.DB, dbName string, tbName string) Table {
 // ParseFieldsByTable 转换数据表字段的类型
 func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string {
 	content := "package models\n\n"
-	if len(tbComment) > 0 {
-		content += "// " + tbComment + "\n"
-	}
 	camelTbName := generator.CamelCase(tbName)
+	content += "var " + camelTbName + "TbName = \"" + tbName + "\"\n"
+
+	if len(tbComment) > 0 {
+		content += "// " + camelTbName + " " + tbComment + "\n"
+	}
 	content += "type " + camelTbName + " struct {\n"
 	for _, val := range fields {
 		// 生成字段
