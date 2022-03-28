@@ -172,8 +172,10 @@ func ParseFieldTypeByTable(fieldType string) string {
 		return "int64"
 	case "bigint unsigned":
 		return "uint64"
-	case "decimal", "double", "float", "real", "numeric":
+	case "double", "float", "real", "numeric":
 		return "float32"
+	case "decimal":
+		return "decimal.Decimal"
 	case "timestamp", "datetime", "time":
 		return "time.Time"
 	default:
