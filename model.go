@@ -124,7 +124,7 @@ func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string 
 		}
 		columnJson += "column:" + val.Field + ";type:" + val.Type + ";"
 		if val.Default != "" {
-			columnJson += "default '" + val.Default + "';"
+			columnJson += "default:" + val.Default + ";"
 		}
 		if val.Null == "NO" {
 			columnJson += "NOT NULL;"
