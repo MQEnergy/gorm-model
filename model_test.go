@@ -1,4 +1,4 @@
-package gorm_model
+package gomodel
 
 import "testing"
 

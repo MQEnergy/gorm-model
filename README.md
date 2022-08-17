@@ -1,49 +1,46 @@
 # gorm-model
-一键生成关联数据表的gorm model 
+基于gorm的一键生成关联mysql数据表模型结构体 
 
 ### 安装到项目中
 ```shell script
 go get -u github.com/MQEnergy/gorm-model
 ```
-#### 注意：
-```
-默认生成model的package 为models，默认生成到main.go所在根目录的models目录中
-```
 
 ### 方法
 
 #### 1、生成全部数据表对应的model 
-##### GenerateAllModel(db *gorm.DB, dbName string) 
-```go
-// 调用方式
-package main
-import gorm_model "github.com/MQEnergy/gorm-model"
-func main() {
-  // dbName 是数据库名称
-  gorm_model.GenerateAllModel(*gorm.DB, dbName)
-}
+##### GenerateAllModel(db *gorm.DB, dbName, mDir, prefix string) 
+```
+db: gorm连接实例
+dbName: 数据库名称
+mDir: 模型存储目录
+prefix: 去除的表前缀名称，不去除传空，去除出前缀名 如：gin
 ```
 
 #### 2、生成单个数据表对应的model 
-##### GenerateSingleModel(db *gorm.DB, tbName string, table Table) 
-```go
-package main
-import gorm_model "github.com/MQEnergy/gorm-model"
-
-func main() {
-	// dbName 数据库名称 tbName 数据表名称
-    table = gorm_model.GetSingleTable(*gorm.DB, dbName, tbName)
-    // tbName 是数据表名称
-    err := gorm_model.GenerateSingleModel(*gorm.DB, tbName, table)
-    if err != nil {
-        panic(err)
-    }
-}
+##### GenerateSingleModel(db *gorm.DB, dbName, tbName, mDir, prefix string) 
 ```
-#### 3、获取单个表信息和字段信息 
-##### GetSingleTable(db *gorm.DB, dbName string, tbName string) 
-#### 4、根据表获取表字段 
-##### GetFieldsByTable(db *gorm.DB, tbName string) 
-#### 5、获取数据库中所有表信息和字段信息 
-##### GetAllTables(db *gorm.DB, dbName string) 
+db: gorm连接实例
+dbName: 数据库名称
+tbName: 数据表名称
+mDir: 模型存储目录
+prefix: 去除的表前缀名称，不去除传空，去除出前缀名 如：gin
+```
 
+### 查看案例examples
+```go
+go run examples/model.go --help
+```
+```
+ -db string
+        数据库名称 如：gin_framework (default "gin_framework")
+  -dir string
+        模型存储目录 如：./models（存入在当前执行命令所在目录，支持多级目录） (default "./models")
+  -dsn string
+        数据库连接信息 如：root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local (default "root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local")
+  -p string
+        数据表前缀 如: gin_ (default "gin_")
+  -tb string
+        模型名称 如：初始化所有（all）单个数据表就填写表名（如：gin_admin） (default "all")
+```
+按照以上参数可自定义生成数据表模型

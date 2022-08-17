@@ -1,120 +1,117 @@
-package gorm_model
+package gomodel
 
 import (
-	"fmt"
-	"github.com/golang/protobuf/protoc-gen-go/generator"
+	"errors"
 	"gorm.io/gorm"
 	"io"
 	"os"
 	"strings"
 )
 
-// Table 表
+// Table table
 type Table struct {
-	TableName    string `gorm:"column:TABLE_NAME"`    // 表名
-	TableComment string `gorm:"column:TABLE_COMMENT"` // 表名注释
+	TableName    string `gorm:"column:TABLE_NAME"`    // table name
+	TableComment string `gorm:"column:TABLE_COMMENT"` // table comment
 }
 
-// Field 表字段
+// Field field
 type Field struct {
-	Field      string `gorm:"column:Field"`      // 字段
-	Type       string `gorm:"column:Type"`       // 类型
-	Collation  string `gorm:"column:Collation"`  // 编码
-	Null       string `gorm:"column:Null"`       // 是否为空
-	Key        string `gorm:"column:Key"`        // 主键
-	Default    string `gorm:"column:Default"`    // 默认值
-	Extra      string `gorm:"column:Extra"`      // 额外类型
-	Privileges string `gorm:"column:Privileges"` // 权限
-	Comment    string `gorm:"column:Comment"`    // 注释
+	Field      string `gorm:"column:Field"`
+	Type       string `gorm:"column:Type"`
+	Collation  string `gorm:"column:Collation"`
+	Null       string `gorm:"column:Null"`
+	Key        string `gorm:"column:Key"`
+	Default    string `gorm:"column:Default"`
+	Extra      string `gorm:"column:Extra"`
+	Privileges string `gorm:"column:Privileges"`
+	Comment    string `gorm:"column:Comment"`
 }
 
-// GenerateAllModel 生成所有model的结构体
-func GenerateAllModel(db *gorm.DB, dbName string) {
-	tables := GetAllTables(db, dbName)
-	for _, val := range tables {
-		err := GenerateSingleModel(db, val.TableName, val)
-		if err != nil {
-			continue
-		}
+// GenerateAllModel generates the struct for all table
+func GenerateAllModel(db *gorm.DB, dbName, mDir, prefix string) ([]string, []error) {
+	var strs []string
+	var errs []error
+	tables := getAllTables(db, dbName)
+	for _, table := range tables {
+		str, err := GenerateSingleModel(db, dbName, table.TableName, mDir, prefix)
+		strs = append(strs, str)
+		errs = append(errs, err)
 	}
+	return strs, errs
 }
 
-// GenerateSingleModel 生成单个model的结构体
-func GenerateSingleModel(db *gorm.DB, tbName string, table Table) error {
+// GenerateSingleModel generates the structure content of a single Model
+func GenerateSingleModel(db *gorm.DB, dbName, tbName, mDir, prefix string) (string, error) {
 	var fields []Field
-	fields = GetFieldsByTable(db, tbName)
-	content := ParseFieldsByTable(tbName, table.TableComment, fields)
-	camelTbName := generator.CamelCase(tbName)
+	table := getSingleTable(db, dbName, tbName)
+	fields = getFieldsByTable(db, tbName)
 
-	// 生成model文件
-	fileName := "./models/" + tbName + ".go"
+	content, camelTbName, _tbName := parseFieldsByTable(tbName, table.TableComment, fields, mDir, prefix)
+	if err := makeMultiDir(mDir); err != nil {
+		return mDir + " create failed.", err
+	}
 	var f *os.File
+	fileName := mDir + "/" + _tbName + ".go"
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		fmt.Println(camelTbName + " 已存在.")
-		return err
-	} else {
-		f, err = os.Create(fileName)
-		if err != nil {
-			return err
-		}
+		return camelTbName + " already existed.", errors.New(camelTbName + " already existed")
+	}
+	f, err := os.Create(fileName)
+	if err != nil {
+		return fileName + " create failed.", err
 	}
 	defer f.Close()
 	if _, err := io.WriteString(f, content); err != nil {
-		fmt.Println(camelTbName + " 生成失败.")
-		return err
-	} else {
-		fmt.Println(camelTbName + " 已生成.")
+		return camelTbName + " generate failed.", err
 	}
-	return nil
+	return camelTbName + " generate success.", nil
 }
 
-// GetAllTables 获取所有表信息和字段信息
-func GetAllTables(db *gorm.DB, dbName string) []Table {
+// getAllTables get all table information and field information
+func getAllTables(db *gorm.DB, dbName string) []Table {
 	var tables []Table
-	err := db.Raw(`
+	db.Raw(`
 			SELECT
-				TABLE_NAME,      -- 表名
-				TABLE_COMMENT    -- 表名注释
+				TABLE_NAME,      -- table name
+				TABLE_COMMENT    -- table comment
 				FROM
 				INFORMATION_SCHEMA.TABLES
-				WHERE TABLE_SCHEMA = "` + dbName + `" -- 数据库名
-		`).Scan(&tables).Error
-	if err != nil {
-		return []Table{}
-	}
+				WHERE TABLE_SCHEMA = "` + dbName + `" -- db name
+		`).Scan(&tables)
 	return tables
 }
 
-// GetSingleTable 获取单个表信息和字段信息
-func GetSingleTable(db *gorm.DB, dbName string, tbName string) Table {
+// getSingleTable get individual table information and field information
+func getSingleTable(db *gorm.DB, dbName string, tbName string) Table {
 	var table Table
-	err := db.Raw(`
+	db.Raw(`
 			SELECT
-				TABLE_NAME,      -- 表名
-				TABLE_COMMENT    -- 表名注释
+				TABLE_NAME,      -- table name
+				TABLE_COMMENT    -- table comment
 				FROM
 				INFORMATION_SCHEMA.TABLES
 				WHERE TABLE_SCHEMA = "` + dbName + `" AND TABLE_NAME = "` + tbName + `"
-		`).Find(&table).Error
-	if err != nil {
-		return Table{}
-	}
+		`).Find(&table)
 	return table
 }
 
-// ParseFieldsByTable 转换数据表字段的类型
-func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string {
-	content := "package models\n\n"
-	camelTbName := generator.CamelCase(tbName)
+// parseFieldsByTable converts the type of a data table field
+func parseFieldsByTable(tbName, tbComment string, fields []Field, mDir, prefix string) (string, string, string) {
+	pkgNameArr := strings.Split(mDir, "/")
+	content := "package " + pkgNameArr[len(pkgNameArr)-1] + "\n\n"
+	_tbName := tbName
+	// whether to remove the table prefix
+	if prefix != "" {
+		_tbName = strings.TrimPrefix(tbName, prefix)
+	}
+	camelTbName := CamelCase(_tbName)
 	content += "var " + camelTbName + "TbName = \"" + tbName + "\"\n\n"
-
 	if len(tbComment) > 0 {
 		content += "// " + camelTbName + " " + tbComment + "\n"
 	}
 	content += "type " + camelTbName + " struct {\n"
 	for _, val := range fields {
 		// 生成字段
-		columnField := generator.CamelCase(val.Field)
+		columnField := CamelCase(val.Field)
 		columnJson := "`gorm:\""
 		if val.Key == "PRI" {
 			columnJson += "primaryKey;"
@@ -135,7 +132,7 @@ func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string 
 			columnJson += "comment:" + val.Comment
 		}
 		columnJson += "\" json:\"" + val.Field + "\"`"
-		columnType := ParseFieldTypeByTable(val.Type)
+		columnType := parseFieldTypeByTable(val.Type)
 		columnComment := ""
 		if len(val.Comment) > 0 {
 			columnComment = "// " + val.Comment
@@ -143,23 +140,20 @@ func ParseFieldsByTable(tbName string, tbComment string, fields []Field) string 
 		content += "    " + columnField + " " + columnType + " " + columnJson + " " + columnComment + "\n"
 	}
 	content += "}"
-	return content
+	return content, camelTbName, _tbName
 }
 
-// GetFieldsByTable 根据表获取表字段
-func GetFieldsByTable(db *gorm.DB, tbName string) []Field {
+// getFieldsByTable get the table fields from the table
+func getFieldsByTable(db *gorm.DB, tbName string) []Field {
 	var field []Field
-	err := db.Raw(`
+	db.Raw(`
 		SHOW FULL COLUMNS FROM ` + tbName + `
-	`).Find(&field).Error
-	if err != nil {
-		return []Field{}
-	}
+	`).Find(&field)
 	return field
 }
 
-// ParseFieldTypeByTable 转义数据库字段类型到model
-func ParseFieldTypeByTable(fieldType string) string {
+// parseFieldTypeByTable escape a database field type to a struct
+func parseFieldTypeByTable(fieldType string) string {
 	typeArr := strings.Split(fieldType, "(")
 	switch typeArr[0] {
 	case "int", "integer", "mediumint", "bit", "year", "smallint", "int unsigned", "mediumint unsigned", "smallint unsigned":
@@ -181,4 +175,28 @@ func ParseFieldTypeByTable(fieldType string) string {
 	default:
 		return "string"
 	}
+}
+
+// isPathExist 判断所给路径文件/文件夹是否存在
+func isPathExist(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+// makeMultiDir 调用os.MkdirAll递归创建文件夹
+func makeMultiDir(filePath string) error {
+	if !isPathExist(filePath) {
+		err := os.MkdirAll(filePath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		return err
+	}
+	return nil
 }
