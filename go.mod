@@ -1,4 +1,4 @@
-module gomodel
+module github.com/MQEnergy/gorm-model
 
 go 1.17
 
