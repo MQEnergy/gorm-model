@@ -50,6 +50,8 @@ go run examples/model.go --help
         模型存储目录 如：./models（存入在当前执行命令所在目录，支持多级目录） (default "./models")
   -dsn string
         数据库连接信息 如：root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local (default "root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local")
+   -ic
+        是否覆盖原生成的模型结构体 true:覆盖 false:不覆盖
   -p string
         数据表前缀 如: gin_ (default "gin_")
   -tb string
