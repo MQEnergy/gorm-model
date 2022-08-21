@@ -1,6 +1,18 @@
 # gorm-model
-基于gorm的一键生成关联mysql数据表模型结构体 
+基于gorm的一键生成关联mysql数据表模型结构体
 
+[![GoDoc](https://pkg.go.dev/badge/github.com/MQEnergy/gorm-model/?status.svg)](https://pkg.go.dev/github.com/MQEnergy/gorm-model)
+[![Go Report Card](https://goreportcard.com/badge/github.com/MQEnergy/gorm-model)](https://goreportcard.com/report/github.com/MQEnergy/gorm-model)
+[![codebeat badge](https://codebeat.co/badges/a1d6feb8-909f-49a5-8d5c-3600b64bda04)](https://codebeat.co/projects/github-com-mqenergy-gorm-model-main)
+[![GitHub license](https://img.shields.io/github/license/MQEnergy/gorm-model)](https://github.com/MQEnergy/gorm-model/blob/main/LICENSE)
+
+### 注意
+```
+需要注意本组件根据数据表的数据字段有两个特殊格式 time和decimal
+需要引入相应组件：
+1、time
+2、github.com/shopspring/decimal（或其他自定义支持decimal.Decimal方法的组件）
+```
 ### 安装到项目中
 ```shell script
 go get -u github.com/MQEnergy/gorm-model
@@ -9,7 +21,7 @@ go get -u github.com/MQEnergy/gorm-model
 ### 方法
 
 #### 1、生成全部数据表对应的model 
-##### GenerateAllModel(db *gorm.DB, dbName, mDir, prefix string) 
+##### GenerateAllModel(cfg *ModelConfig) 
 ```
 db: gorm连接实例
 dbName: 数据库名称
@@ -18,7 +30,7 @@ prefix: 去除的表前缀名称，不去除传空，去除出前缀名 如：gi
 ```
 
 #### 2、生成单个数据表对应的model 
-##### GenerateSingleModel(db *gorm.DB, dbName, tbName, mDir, prefix string) 
+##### GenerateSingleModel(cfg *ModelConfig, tbName string) 
 ```
 db: gorm连接实例
 dbName: 数据库名称

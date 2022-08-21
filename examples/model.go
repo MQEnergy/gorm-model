@@ -10,11 +10,12 @@ import (
 )
 
 var (
-	dbName string
-	tbName string
-	mDir   string // 模型存储目录
-	prefix string // 数据表前缀
-	dsn    string // 数据库连接信息
+	dbName  string
+	tbName  string
+	mDir    string // 模型存储目录
+	prefix  string // 数据表前缀
+	dsn     string // 数据库连接信息
+	isCover bool   // 是否覆盖
 )
 
 func init() {
@@ -23,6 +24,7 @@ func init() {
 	flag.StringVar(&prefix, "p", "gin_", "数据表前缀 如: gin_")
 	flag.StringVar(&dsn, "dsn", "root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local", "数据库连接信息 如：root:123456@tcp(127.0.0.1:3306)/gin_framework?charset=utf8mb4&parseTime=True&loc=Local")
 	flag.StringVar(&mDir, "dir", "./models", "模型存储目录 如：./models（存入在当前执行命令所在目录，支持多级目录）")
+	flag.BoolVar(&isCover, "ic", false, "是否覆盖原生成的模型结构体 true:覆盖 false:不覆盖")
 }
 
 func main() {
@@ -37,7 +39,7 @@ func main() {
 		DbName:  dbName,
 		MDir:    mDir,
 		Prefix:  prefix,
-		IsCover: true,
+		IsCover: isCover,
 	}
 	if tbName == "all" {
 		strs, errs := gomodel.GenerateAllModel(modelConfig)
