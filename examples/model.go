@@ -32,8 +32,15 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	modelConfig := &gomodel.ModelConfig{
+		DB:      db,
+		DbName:  dbName,
+		MDir:    mDir,
+		Prefix:  prefix,
+		IsCover: true,
+	}
 	if tbName == "all" {
-		strs, errs := gomodel.GenerateAllModel(db, dbName, mDir, prefix)
+		strs, errs := gomodel.GenerateAllModel(modelConfig)
 		for i, str := range strs {
 			if errs[i] != nil {
 				fmt.Println(fmt.Sprintf("\x1b[31m%s\x1b[0m", str))
@@ -42,7 +49,7 @@ func main() {
 			}
 		}
 	} else {
-		str, err := gomodel.GenerateSingleModel(db, dbName, tbName, mDir, prefix)
+		str, err := gomodel.GenerateSingleModel(modelConfig, tbName)
 		if err != nil {
 			fmt.Println(fmt.Sprintf("\x1b[31m%s\x1b[0m", str))
 			return

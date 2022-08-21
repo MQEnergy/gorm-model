@@ -27,13 +27,21 @@ type Field struct {
 	Comment    string `gorm:"column:Comment"`
 }
 
+type ModelConfig struct {
+	DB      *gorm.DB
+	DbName  string
+	MDir    string
+	Prefix  string
+	IsCover bool
+}
+
 // GenerateAllModel generates the struct for all table
-func GenerateAllModel(db *gorm.DB, dbName, mDir, prefix string) ([]string, []error) {
+func GenerateAllModel(cfg *ModelConfig) ([]string, []error) {
 	var strs []string
 	var errs []error
-	tables := getAllTables(db, dbName)
+	tables := getAllTables(cfg.DB, cfg.DbName)
 	for _, table := range tables {
-		str, err := GenerateSingleModel(db, dbName, table.TableName, mDir, prefix)
+		str, err := GenerateSingleModel(cfg, table.TableName)
 		strs = append(strs, str)
 		errs = append(errs, err)
 	}
@@ -41,19 +49,21 @@ func GenerateAllModel(db *gorm.DB, dbName, mDir, prefix string) ([]string, []err
 }
 
 // GenerateSingleModel generates the structure content of a single Model
-func GenerateSingleModel(db *gorm.DB, dbName, tbName, mDir, prefix string) (string, error) {
+func GenerateSingleModel(cfg *ModelConfig, tbName string) (string, error) {
 	var fields []Field
-	table := getSingleTable(db, dbName, tbName)
-	fields = getFieldsByTable(db, tbName)
+	table := getSingleTable(cfg.DB, cfg.DbName, tbName)
+	fields = getFieldsByTable(cfg.DB, tbName)
 
-	content, camelTbName, _tbName := parseFieldsByTable(tbName, table.TableComment, fields, mDir, prefix)
-	if err := makeMultiDir(mDir); err != nil {
-		return mDir + " create failed.", err
+	content, camelTbName, _tbName := parseFieldsByTable(tbName, table.TableComment, fields, cfg.MDir, cfg.Prefix)
+	if err := makeMultiDir(cfg.MDir); err != nil {
+		return cfg.MDir + " create failed.", err
 	}
 	var f *os.File
-	fileName := mDir + "/" + _tbName + ".go"
-	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		return camelTbName + " already existed.", errors.New(camelTbName + " already existed")
+	fileName := cfg.MDir + "/" + _tbName + ".go"
+	if cfg.IsCover == false {
+		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+			return camelTbName + " already existed.", errors.New(camelTbName + " already existed")
+		}
 	}
 	f, err := os.Create(fileName)
 	if err != nil {
