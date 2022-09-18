@@ -164,15 +164,19 @@ func parseFieldsByTable(tbName, tbComment string, fields []Field, mDir, prefix s
 // parseFieldTypeByTable escape a database field type to a struct We've only done a partial conversion here Other types need to be implemented
 func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType string) string {
 	typeArr := strings.Split(fieldType, "(")
+	var typeName string
+	if strings.Contains(typeArr[0], "unsigned") {
+		typeName += "u"
+	}
 	switch typeArr[0] {
 	case "int", "integer", "int unsigned", "mediumint", "mediumint unsigned", "year":
-		return parseStrInt2Ptr(defaultType, nullType, "int")
+		return parseStrInt2Ptr(defaultType, nullType, typeName+"int")
 	case "tinyint", "tinyint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, "int8")
+		return parseStrInt2Ptr(defaultType, nullType, typeName+"int8")
 	case "smallint", "smallint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, "int16")
+		return parseStrInt2Ptr(defaultType, nullType, typeName+"int16")
 	case "bigint", "bigint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, "int64")
+		return parseStrInt2Ptr(defaultType, nullType, typeName+"int64")
 	case "double", "float", "real", "numeric":
 		return "float32"
 	case "double unsigned", "float unsigned":
@@ -190,9 +194,6 @@ func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType strin
 
 // parseStrInt2Ptr Convert string / int to pointer string
 func parseStrInt2Ptr(defaultType sql.NullString, nullType, typeName string) string {
-	if strings.Contains(typeName, "unsigned") {
-		typeName += "u"
-	}
 	if nullType == "NO" && (defaultType.String == "" || defaultType.String == "0") && defaultType.Valid {
 		return "*" + typeName
 	}
