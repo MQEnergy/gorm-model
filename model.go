@@ -1,6 +1,7 @@
 package gomodel
 
 import (
+	"database/sql"
 	"errors"
 	"gorm.io/gorm"
 	"io"
@@ -16,15 +17,15 @@ type Table struct {
 
 // Field field
 type Field struct {
-	Field      string `gorm:"column:Field"`
-	Type       string `gorm:"column:Type"`
-	Collation  string `gorm:"column:Collation"`
-	Null       string `gorm:"column:Null"`
-	Key        string `gorm:"column:Key"`
-	Default    string `gorm:"column:Default"`
-	Extra      string `gorm:"column:Extra"`
-	Privileges string `gorm:"column:Privileges"`
-	Comment    string `gorm:"column:Comment"`
+	Field      string         `gorm:"column:Field"`
+	Type       string         `gorm:"column:Type"`
+	Collation  string         `gorm:"column:Collation"`
+	Null       string         `gorm:"column:Null"`
+	Key        string         `gorm:"column:Key"`
+	Default    sql.NullString `gorm:"column:Default"`
+	Extra      string         `gorm:"column:Extra"`
+	Privileges string         `gorm:"column:Privileges"`
+	Comment    string         `gorm:"column:Comment"`
 }
 
 type ModelConfig struct {
@@ -91,7 +92,7 @@ func getAllTables(db *gorm.DB, dbName string) []Table {
 }
 
 // getSingleTable get individual table information and field information
-func getSingleTable(db *gorm.DB, dbName string, tbName string) Table {
+func getSingleTable(db *gorm.DB, dbName, tbName string) Table {
 	var table Table
 	db.Raw(`
 			SELECT
@@ -102,6 +103,13 @@ func getSingleTable(db *gorm.DB, dbName string, tbName string) Table {
 				WHERE TABLE_SCHEMA = "` + dbName + `" AND TABLE_NAME = "` + tbName + `"
 		`).Find(&table)
 	return table
+}
+
+// getFieldsByTable get the table fields from the table
+func getFieldsByTable(db *gorm.DB, tbName string) []Field {
+	fields := make([]Field, 0)
+	db.Raw(`SHOW FULL COLUMNS FROM ` + tbName).Find(&fields)
+	return fields
 }
 
 // parseFieldsByTable converts the type of a data table field
@@ -130,8 +138,8 @@ func parseFieldsByTable(tbName, tbComment string, fields []Field, mDir, prefix s
 			columnJson += "autoIncrement;"
 		}
 		columnJson += "column:" + val.Field + ";type:" + val.Type + ";"
-		if val.Default != "" {
-			columnJson += "default:" + val.Default + ";"
+		if val.Null == "NO" && val.Default.Valid {
+			columnJson += "default:" + val.Default.String + ";"
 		}
 		if val.Null == "NO" {
 			columnJson += "NOT NULL;"
@@ -142,7 +150,7 @@ func parseFieldsByTable(tbName, tbComment string, fields []Field, mDir, prefix s
 			columnJson += "comment:" + val.Comment
 		}
 		columnJson += "\" json:\"" + val.Field + "\"`"
-		columnType := parseFieldTypeByTable(val.Type)
+		columnType := parseFieldTypeByTable(val.Default, val.Null, val.Type)
 		columnComment := ""
 		if len(val.Comment) > 0 {
 			columnComment = "// " + val.Comment
@@ -153,41 +161,45 @@ func parseFieldsByTable(tbName, tbComment string, fields []Field, mDir, prefix s
 	return content, camelTbName, _tbName
 }
 
-// getFieldsByTable get the table fields from the table
-func getFieldsByTable(db *gorm.DB, tbName string) []Field {
-	var field []Field
-	db.Raw(`
-		SHOW FULL COLUMNS FROM ` + tbName + `
-	`).Find(&field)
-	return field
-}
-
-// parseFieldTypeByTable escape a database field type to a struct
-func parseFieldTypeByTable(fieldType string) string {
+// parseFieldTypeByTable escape a database field type to a struct We've only done a partial conversion here Other types need to be implemented
+func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType string) string {
 	typeArr := strings.Split(fieldType, "(")
 	switch typeArr[0] {
-	case "int", "integer", "mediumint", "bit", "year", "smallint", "int unsigned", "mediumint unsigned", "smallint unsigned":
-		return "int"
-	case "tinyint":
-		return "int8"
-	case "tinyint unsigned":
-		return "uint8"
-	case "bigint":
-		return "int64"
-	case "bigint unsigned":
-		return "uint64"
+	case "int", "integer", "int unsigned", "mediumint", "mediumint unsigned", "year":
+		return parseStrInt2Ptr(defaultType, nullType, "int")
+	case "tinyint", "tinyint unsigned":
+		return parseStrInt2Ptr(defaultType, nullType, "int8")
+	case "smallint", "smallint unsigned":
+		return parseStrInt2Ptr(defaultType, nullType, "int16")
+	case "bigint", "bigint unsigned":
+		return parseStrInt2Ptr(defaultType, nullType, "int64")
 	case "double", "float", "real", "numeric":
 		return "float32"
+	case "double unsigned", "float unsigned":
+		return "float64"
 	case "decimal":
 		return "decimal.Decimal"
-	case "timestamp", "datetime", "time":
+	case "timestamp", "datetime", "date", "time":
 		return "time.Time"
+	case "bool":
+		return "bool"
 	default:
-		return "string"
+		return parseStrInt2Ptr(defaultType, nullType, "string")
 	}
 }
 
-// isPathExist 判断所给路径文件/文件夹是否存在
+// parseStrInt2Ptr Convert string / int to pointer string
+func parseStrInt2Ptr(defaultType sql.NullString, nullType, typeName string) string {
+	if strings.Contains(typeName, "unsigned") {
+		typeName += "u"
+	}
+	if nullType == "NO" && (defaultType.String == "" || defaultType.String == "0") && defaultType.Valid {
+		return "*" + typeName
+	}
+	return typeName
+}
+
+// isPathExist Check whether the given file/folder exists
 func isPathExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -199,7 +211,7 @@ func isPathExist(path string) bool {
 	return true
 }
 
-// makeMultiDir 调用os.MkdirAll递归创建文件夹
+// makeMultiDir Call os.mkdirall to recursively create the folder
 func makeMultiDir(filePath string) error {
 	if !isPathExist(filePath) {
 		err := os.MkdirAll(filePath, os.ModePerm)
