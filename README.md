@@ -59,6 +59,11 @@ go run examples/model.go --help
 ```
 按照以上参数可自定义生成数据表模型
 
+例如：
+```
+go run examples/model.go -db=test -tb=wb_user -p=t_ -dsn='root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local'
+```
+
 ### 注意：
 1、`time.Time`类型需要import "time"，需手动加载
 
