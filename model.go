@@ -184,7 +184,7 @@ func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType strin
 	case "decimal":
 		return "decimal.Decimal"
 	case "timestamp", "datetime", "date", "time":
-		return "time.Time"
+		return parseStrInt2Ptr(defaultType, nullType, typeName+"time.Time")
 	case "bool":
 		return "bool"
 	default:
@@ -195,6 +195,9 @@ func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType strin
 // parseStrInt2Ptr Convert string / int to pointer string
 func parseStrInt2Ptr(defaultType sql.NullString, nullType, typeName string) string {
 	if nullType == "NO" && (defaultType.String == "" || defaultType.String == "0") && defaultType.Valid {
+		return "*" + typeName
+	}
+	if nullType == "YES" {
 		return "*" + typeName
 	}
 	return typeName

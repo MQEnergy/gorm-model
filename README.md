@@ -58,3 +58,8 @@ go run examples/model.go --help
         模型名称 如：初始化所有（all）单个数据表就填写表名（如：gin_admin） (default "all")
 ```
 按照以上参数可自定义生成数据表模型
+
+### 注意：
+1、`time.Time`类型需要import "time"，需手动加载
+
+2、`decimal.Decimal`类型需要 import "github.com/shopspring/decimal"，需手动安装加载
