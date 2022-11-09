@@ -170,13 +170,13 @@ func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType strin
 	}
 	switch typeArr[0] {
 	case "int", "integer", "int unsigned", "mediumint", "mediumint unsigned", "year":
-		return parseStrInt2Ptr(defaultType, nullType, typeName+"int")
+		return parseAny2Ptr(nullType, typeName+"int")
 	case "tinyint", "tinyint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, typeName+"int8")
+		return parseAny2Ptr(nullType, typeName+"int8")
 	case "smallint", "smallint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, typeName+"int16")
+		return parseAny2Ptr(nullType, typeName+"int16")
 	case "bigint", "bigint unsigned":
-		return parseStrInt2Ptr(defaultType, nullType, typeName+"int64")
+		return parseAny2Ptr(nullType, typeName+"int64")
 	case "double", "float", "real", "numeric":
 		return "float32"
 	case "double unsigned", "float unsigned":
@@ -184,19 +184,16 @@ func parseFieldTypeByTable(defaultType sql.NullString, nullType, fieldType strin
 	case "decimal":
 		return "decimal.Decimal"
 	case "timestamp", "datetime", "date", "time":
-		return parseStrInt2Ptr(defaultType, nullType, typeName+"time.Time")
+		return parseAny2Ptr(nullType, typeName+"time.Time")
 	case "bool":
 		return "bool"
 	default:
-		return parseStrInt2Ptr(defaultType, nullType, "string")
+		return parseAny2Ptr(nullType, "string")
 	}
 }
 
-// parseStrInt2Ptr Convert string / int to pointer string
-func parseStrInt2Ptr(defaultType sql.NullString, nullType, typeName string) string {
-	if nullType == "NO" && (defaultType.String == "" || defaultType.String == "0") && defaultType.Valid {
-		return "*" + typeName
-	}
+// parseAny2Ptr Convert string / int / time.Time ... to pointer string
+func parseAny2Ptr(nullType, typeName string) string {
 	if nullType == "YES" {
 		return "*" + typeName
 	}
